@@ -165,8 +165,8 @@ def reconstruct_bi_path(node_fwd, node_bwd):
     # No, the parent for backward search point from a child to its parent (towards end_pos)
     # Example: end_pos <- child.parent <- child <- meeting_node_bwd_parent
     # So path_bwd will be [meeting_node_bwd.position, meeting_node_bwd.parent.position, ..., end_pos]
-    # We need to reverse it and remove the first element if it's the same as path_fwd's last.
-    path_bwd.reverse() 
+    # This list is already in the correct order (from meeting node to end_pos via bwd search parents).
+    # No reversal needed for path_bwd.
 
     # The meeting node (node_fwd.position or node_bwd.position) is included in both paths.
     # Remove one instance to avoid duplication.
@@ -297,9 +297,10 @@ def bidirectional_astar(terrain_grid, start_pos, end_pos):
                                                  # This condition is more complex than simple meeting. A simpler stop is when one search meets a closed node of another.
                                                  # The provided logic already updates path_cost when a meeting occurs.
                                                  # The loop will continue to find potentially better meeting points.
-                pass # Continue searching for better paths if any
+                break # Terminate the while loop if no better path can be found
+                # pass # Continue searching for better paths if any -> Old behavior
 
-    if meeting_node_pos:
+    if meeting_node_pos: # This means path_cost is not float('inf')
         # Reconstruct path using the stored final_fwd_node and final_bwd_node corresponding to the best path_cost
         # Need to ensure these nodes are correctly captured when path_cost is updated.
         # Re-fetch from closed lists using meeting_node_pos to be sure.
