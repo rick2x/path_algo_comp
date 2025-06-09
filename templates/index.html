@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathfinding Algorithm Comparison</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Pathfinding Algorithm Comparison</h1>
+            <p>Select an algorithm and see how it performs on the same maze!</p>
+            <h2 id="path-cost-display"></h2>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="algorithm-select">Algorithm:</label>
+                <div class="select-wrapper">
+                    <select id="algorithm-select">
+                        <option value="astar" selected>A* Search</option>
+                        <option value="dijkstra">Dijkstra's</option>
+                        <option value="bfs">Breadth-First Search (BFS)</option>
+                    </select>
+                </div>
+            </div>
+            <button id="start-btn" class="btn btn-primary">Visualize</button>
+            <button id="maze-btn" class="btn">Generate Maze</button>
+            <button id="reset-btn" class="btn">Reset Board</button>
+            <div class="slider-container">
+                <label for="speed-slider">Speed:</label>
+                <input type="range" min="1" max="200" value="50" class="slider" id="speed-slider">
+            </div>
+            <div class="slider-container">
+                <label for="imperfection-slider">Imperfection:</label>
+                <input type="range" min="0" max="100" value="30" class="slider" id="imperfection-slider">
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="grid-container"></div>
+            <div id="story-log-container">
+                <h3>Algorithm's Thought Process</h3>
+                <div id="story-log">
+                    <p>Select an algorithm, generate a maze, and click Visualize!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color start"></div> Start (🚀)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color end"></div> End (🏁)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color wall"></div> Wall (Cost ∞)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color plains"></div> Plain (Cost 1)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color water"></div> Water (Cost 5)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color mud"></div> Mud (Cost 10)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color closed"></div> Evaluated
+            </div>
+            <div class="legend-item">
+                <div class="legend-color path"></div> Final Path
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h2>Algorithm Differences</h2>
+            <ul>
+                <li><strong>A* Search:</strong> Uses a heuristic to intelligently guess the best direction. Finds the
+                    cheapest path very efficiently.</li>
+                <li><strong>Dijkstra's:</strong> Finds the cheapest path but explores blindly in all directions. Slower
+                    than A*.</li>
+                <li><strong>BFS:</strong> Ignores costs and finds the shortest path in terms of steps. Often finds a
+                    "dumb" but short path.</li>
+            </ul>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,431 @@
+:root {
+    --bg-color: #1a1a2e;
+    --grid-bg: #16213e;
+    --text-color: #e94560;
+    --primary-color: #0f3460;
+    --light-text: #dcdcdc;
+    --border-color: #e94560;
+
+    --start-color: #4caf50;
+    --end-color: #f44336;
+    --wall-color: #0f3460;
+    --path-color: #ffeb3b;
+    --path-color-overlay: rgba(255, 235, 59, 0.5);
+    --closed-color-overlay: rgba(255, 82, 82, 0.35);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--light-text);
+    font-family: 'Roboto Mono', monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    /* --- KEY CHANGE --- */
+    /* Increased max-width to accommodate the side-by-side layout on large monitors. */
+    max-width: 1800px;
+}
+
+.header,
+.info-box {
+    text-align: center;
+    background-color: var(--primary-color);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    /* --- KEY CHANGE --- */
+    /* Made these sections take up the full available width of the new container */
+    width: 100%;
+    box-sizing: border-box;
+    /* Ensures padding is included in the width */
+}
+
+h1 {
+    color: var(--text-color);
+    margin: 0 0 10px 0;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--primary-color);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.btn {
+    background-color: var(--text-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-family: 'Roboto Mono', monospace;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn:hover {
+    background-color: #ff768f;
+    transform: translateY(-2px);
+}
+
+.btn:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* --- KEY CHANGE --- */
+/* This is the main change that creates the side-by-side layout. */
+.main-content {
+    display: flex;
+    /* Use Flexbox for layout */
+    flex-direction: row;
+    /* Arrange items horizontally */
+    flex-wrap: wrap;
+    /* Allow items to stack on small screens */
+    gap: 20px;
+    /* Space between grid and log */
+    justify-content: center;
+    /* Center the items horizontally */
+    align-items: flex-start;
+    /* Align to the top */
+    width: 100%;
+}
+
+#grid-container {
+    display: grid;
+    background-color: var(--grid-bg);
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.cell {
+    width: 25px;
+    height: 25px;
+    border: 1px solid #0f3460;
+    position: relative;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 8px;
+    color: white;
+}
+
+.cell.start,
+.cell.end {
+    font-size: 18px;
+    cursor: grab;
+}
+
+.cell.start:active,
+.cell.end:active {
+    cursor: grabbing;
+}
+
+.cell.wall {
+    background-color: var(--wall-color);
+    border-color: #1a1a2e;
+    animation: wall-pop 0.3s ease-out;
+}
+
+@keyframes wall-pop {
+    from {
+        transform: scale(0.5);
+    }
+
+    to {
+        transform: scale(1.0);
+    }
+}
+
+.cell.water {
+    background-color: #3498db;
+    background-image:
+        linear-gradient(45deg, rgba(255, 255, 255, 0.2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.2) 75%, transparent 75%, transparent);
+    background-size: 20px 20px;
+}
+
+.cell.mud {
+    background-color: #795548;
+    background-image: radial-gradient(#8d6e63 20%, transparent 20%),
+        radial-gradient(#6d4c41 20%, transparent 20%);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
+}
+
+.cell.closed {
+    background-color: var(--closed-color-overlay);
+}
+
+.cell.path {
+    animation: path-glow 1.2s infinite alternate;
+}
+
+.cell.path.plains {
+    background-color: var(--path-color);
+}
+
+.cell.path.water {
+    background-image:
+        linear-gradient(var(--path-color-overlay), var(--path-color-overlay)),
+        linear-gradient(45deg, rgba(255, 255, 255, 0.2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.2) 75%, transparent 75%, transparent);
+}
+
+.cell.path.mud {
+    background-image:
+        linear-gradient(var(--path-color-overlay), var(--path-color-overlay)),
+        radial-gradient(#8d6e63 20%, transparent 20%),
+        radial-gradient(#6d4c41 20%, transparent 20%);
+}
+
+@keyframes path-glow {
+    from {
+        box-shadow: inset 0 0 0 2px var(--path-color);
+    }
+
+    to {
+        box-shadow: inset 0 0 0 3px var(--path-color), 0 0 15px var(--path-color);
+    }
+}
+
+.cell .score {
+    position: absolute;
+    font-size: 7px;
+    opacity: 0.8;
+    transition: color 0.3s, opacity 0.3s;
+}
+
+.cell .g-score {
+    top: 1px;
+    left: 1px;
+}
+
+.cell .h-score {
+    top: 1px;
+    right: 1px;
+}
+
+.cell .f-score {
+    bottom: 1px;
+    color: var(--text-color);
+    font-weight: bold;
+    font-size: 8px;
+}
+
+.cell.path .g-score,
+.cell.path .h-score,
+.cell.path .f-score {
+    color: #111;
+    font-weight: bold;
+    opacity: 1;
+}
+
+#story-log-container {
+    background-color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    width: 350px;
+    height: 679px;
+    display: flex;
+    flex-direction: column;
+}
+
+#story-log-container h3 {
+    margin-top: 0;
+    text-align: center;
+    color: var(--text-color);
+}
+
+#story-log {
+    background-color: #101d33;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+#story-log p {
+    margin: 0 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #1a2e50;
+    word-wrap: break-word;
+}
+
+#story-log p:last-child {
+    border-bottom: none;
+}
+
+#story-log .highlight {
+    color: var(--path-color);
+    font-weight: bold;
+}
+
+#path-cost-display {
+    color: var(--path-color);
+    margin: 10px 0 0 0;
+    min-height: 28px;
+}
+
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid var(--light-text);
+}
+
+.legend-color.start {
+    background-color: var(--start-color);
+}
+
+.legend-color.end {
+    background-color: var(--end-color);
+}
+
+.legend-color.wall {
+    background-color: var(--wall-color);
+}
+
+.legend-color.plains {
+    background-color: transparent;
+    border: 1px solid var(--grid-bg);
+}
+
+.legend-color.water {
+    background-color: #3498db;
+}
+
+.legend-color.mud {
+    background-color: #795548;
+}
+
+.legend-color.closed {
+    background-color: var(--closed-color-overlay);
+}
+
+.legend-color.path {
+    background: var(--path-color);
+}
+
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 200px; /* Adjust width as needed */
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: box-shadow 0.3s;
+}
+
+.select-wrapper:hover {
+    box-shadow: 0 0 8px var(--border-color);
+}
+
+/* 2. Our custom arrow, created with CSS */
+.select-wrapper::after {
+    content: '▼'; /* You can also use an SVG here */
+    font-size: 12px;
+    color: var(--text-color);
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    pointer-events: none; /* Allows clicks to pass through to the select element */
+    transition: transform 0.3s ease;
+}
+
+/* Optional: Make the arrow point up when the dropdown is open */
+.select-wrapper select:focus + ::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* 3. The actual <select> element, made invisible but functional */
+.select-wrapper select {
+    /* Reset default styles */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    /* Make it transparent and cover the wrapper */
+    width: 100%;
+    height: 100%;
+    padding: 10px 40px 10px 15px; /* Right padding to not overlap the arrow */
+    background: transparent;
+    border: none;
+    
+    /* Style the text */
+    color: var(--light-text);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* 4. Style the dropdown options panel */
+.select-wrapper select option {
+    background-color: var(--primary-color);
+    color: var(--light-text);
+}
+
+/* 5. For older browsers like IE */
+.select-wrapper select::-ms-expand {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .cell {
+        width: 15px;
+        height: 15px;
+        font-size: 6px;
+    }
+
+    .cell .score {
+        font-size: 5px;
+    }
+
+    .cell .f-score {
+        font-size: 6px;
+    }
+}
