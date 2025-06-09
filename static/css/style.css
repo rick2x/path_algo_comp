@@ -429,3 +429,49 @@ h1 {
         font-size: 6px;
     }
 }
+
+.comparison-container {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f9f9f9; /* Light background for the container */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%; /* Take full width of its parent */
+    box-sizing: border-box;
+}
+.comparison-container h2 {
+    margin-top: 0;
+    color: #333; /* Darker text color for heading inside this container */
+    text-align: center;
+}
+.table-responsive {
+    overflow-x: auto; /* Allows table to scroll horizontally on small screens */
+}
+#comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+#comparison-table th, #comparison-table td {
+    border: 1px solid #ddd; /* Light grey border for cells */
+    padding: 8px;
+    text-align: left;
+    color: #333; /* Darker text for table content */
+}
+#comparison-table th {
+    background-color: #e9ecef; /* Light grey background for table header */
+    color: #333; /* Darker text for table header */
+    font-weight: bold;
+}
+#comparison-table tbody tr:nth-child(even) {
+    background-color: #f2f2f2; /* Zebra striping for table rows */
+}
+#comparison-table tbody tr:hover {
+    background-color: #e2e2e2; /* Hover effect for table rows */
+}
+#clear-comparison-btn {
+    margin-bottom: 10px;
+    display: block; /* Make button take its own line */
+    margin-left: auto; /* Align to right */
+    margin-right: auto; /* Align to center if display:block */
+}

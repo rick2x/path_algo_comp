@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const NUM_COLS = 50;
     const NUM_ROWS = 25;
     let terrainGrid = [];
+    let comparisonStats = []; // For comparison table
     let startNode = { row: 12, col: 10 };
     let endNode = { row: 12, col: 40 };
     let animationSpeed = 50;
@@ -28,6 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function addToLog(message) {
         storyLog.innerHTML += `<p>${message}</p>`;
         storyLog.scrollTop = storyLog.scrollHeight;
+    }
+
+    // --- Comparison Table ---
+    function renderComparisonTable() {
+        const tableBody = document.querySelector("#comparison-table tbody");
+        if (!tableBody) return; // Guard clause if table doesn't exist
+        tableBody.innerHTML = ''; // Clear existing rows
+        comparisonStats.forEach(stat => {
+            const row = tableBody.insertRow();
+            row.insertCell().textContent = stat.algorithmName;
+            row.insertCell().textContent = stat.pathCost;
+            row.insertCell().textContent = stat.pathLength;
+            row.insertCell().textContent = stat.nodesExplored;
+            row.insertCell().textContent = stat.executionTimeMs;
+            row.insertCell().textContent = stat.pathFound ? 'Yes' : 'No';
+        });
     }
 
     // --- Grid Initialization ---
@@ -145,17 +162,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             await animateSearch(data.visited_nodes, selectedAlgorithm);
             
-            if (data.path.length > 0) {
-                const finalNode = data.visited_nodes.find(n => n.pos[0] === endNode.row && n.pos[1] === endNode.col) || data.visited_nodes[data.visited_nodes.length - 1];
-                const totalCost = finalNode.g;
-                pathCostDisplay.textContent = `Path Found! Cost: ${totalCost} | Nodes: ${data.visited_nodes.length} | Time: ${data.execution_time_ms}ms`;
-                addToLog(`🏁 Path Found! Total cost is <span class="highlight">${totalCost}</span>.`);
+            const pathFound = data.path.length > 0;
+            let currentCost = "N/A";
+
+            if (pathFound) {
+                if (data.path_cost !== undefined) { // Backend sent total_cost (e.g., Bi-A*)
+                    currentCost = data.path_cost;
+                } else if (selectedAlgorithm === 'bfs') {
+                    // BFS path cost is specifically calculated by backend and stored in g of end node
+                    const endNodeData = data.visited_nodes.find(n => n.pos[0] === endNode.row && n.pos[1] === endNode.col);
+                    if (endNodeData) {
+                        currentCost = endNodeData.g;
+                    } else if (data.path.length > 0) { // Fallback for BFS if end node not in visited_nodes
+                        const lastPathNodePos = data.path[data.path.length-1];
+                        const lastPathNodeData = data.visited_nodes.find(n => n.pos[0] === lastPathNodePos[0] && n.pos[1] === lastPathNodePos[1]);
+                        if(lastPathNodeData) currentCost = lastPathNodeData.g;
+                    }
+                } else { // For A*, Dijkstra, GBFS
+                    const finalPathNode = data.visited_nodes.find(n => n.pos[0] === endNode.row && n.pos[1] === endNode.col);
+                    if (finalPathNode) {
+                        currentCost = finalPathNode.g;
+                    } else { // If end node not in visited for some reason, take last node of path
+                         const lastNodeInPath = data.path[data.path.length -1];
+                         const lastNodeData = data.visited_nodes.find(n => n.pos[0] === lastNodeInPath[0] && n.pos[1] === lastNodeInPath[1]);
+                         if(lastNodeData) currentCost = lastNodeData.g;
+                    }
+                }
+                // Refined pathCostDisplay content
+                pathCostDisplay.textContent = `Result: Path Found! Cost: ${currentCost} | Length: ${data.path.length} steps | Explored: ${data.visited_nodes.length} nodes | Time: ${data.execution_time_ms}ms`;
+                addToLog(`🏁 Path Found! Total cost: <span class="highlight">${currentCost}</span>, Steps: <span class="highlight">${data.path.length}</span>.`);
                 addToLog(`📊 Stats: Explored <span class="highlight">${data.visited_nodes.length}</span> nodes in <span class="highlight">${data.execution_time_ms}ms</span>.`);
                 await animatePath(data.path);
             } else {
-                pathCostDisplay.textContent = "No Path Found!";
-                addToLog(`❌ No path could be found. Explored <span class="highlight">${data.visited_nodes.length}</span> nodes.`);
+                // Refined pathCostDisplay content for no path found
+                pathCostDisplay.textContent = `Result: No Path Found. Explored: ${data.visited_nodes.length} nodes | Time: ${data.execution_time_ms}ms`;
+                addToLog(`❌ No path could be found. Explored <span class="highlight">${data.visited_nodes.length}</span> nodes in <span class="highlight">${data.execution_time_ms}ms</span>.`);
             }
+
+            comparisonStats.push({
+              algorithmName: algoName,
+              pathCost: pathFound ? currentCost : "N/A",
+              pathLength: pathFound ? data.path.length : "N/A",
+              nodesExplored: data.visited_nodes.length,
+              executionTimeMs: data.execution_time_ms,
+              pathFound: pathFound
+            });
+            renderComparisonTable();
+
         } catch (error) {
             console.error("Error during visualization:", error);
             addToLog(`🛑 An error occurred: ${error.message}`);
@@ -176,11 +229,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!isStartNode && !isEndNode) {
                 cellElement.classList.add('closed');
-                if(algorithm === 'astar' || algorithm === 'dijkstra') {
+                // Display G, H, and F scores for A*, Dijkstra, GBFS, and Bidirectional A*
+                if(algorithm === 'astar' || algorithm === 'dijkstra' || algorithm === 'gbfs' || algorithm === 'bidirectional_astar') {
                     cellElement.querySelector('.g-score').textContent = nodeData.g;
                     cellElement.querySelector('.h-score').textContent = nodeData.h.toFixed(0);
-                    cellElement.querySelector('.f-score').textContent = nodeData.f.toFixed(0);
-                } else {
+                    // F-score for GBFS might be just H, or G+H depending on Python implementation.
+                    // For Bidirectional A*, f, g, h are from the perspective of its respective search direction.
+                    cellElement.querySelector('.f-score').textContent = nodeData.f.toFixed(0); 
+                } else { // BFS
                     cellElement.querySelector('.g-score').textContent = nodeData.g;
                 }
             }
@@ -188,8 +244,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let logMessage;
             if (algorithm === 'bfs') {
                 logMessage = `Visiting [${row}, ${col}], steps: <span class="highlight">${nodeData.g}</span>.`;
-            } else {
-                logMessage = `Evaluating [${row}, ${col}]. G: <span class="highlight">${nodeData.g}</span>, F: <span class="highlight">${nodeData.f.toFixed(0)}</span>.`;
+            } else if (algorithm === 'gbfs') {
+                logMessage = `Evaluating [${row}, ${col}] based on heuristic. H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, G: <span class="highlight">${nodeData.g}</span>.`;
+            } else if (algorithm === 'bidirectional_astar') {
+                // The 'dir' field could be used here: nodeData.dir === 'fwd' ? '(Fwd)' : '(Bwd)'
+                logMessage = `Evaluating [${row}, ${col}] (Bi-A*). G: <span class="highlight">${nodeData.g}</span>, H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, F: <span class="highlight">${nodeData.f.toFixed(0)}</span>.`;
+            }
+            else { // A* and Dijkstra
+                logMessage = `Evaluating [${row}, ${col}]. G: <span class="highlight">${nodeData.g}</span>, H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, F: <span class="highlight">${nodeData.f.toFixed(0)}</span>.`;
             }
             addToLog(logMessage);
             await new Promise(resolve => setTimeout(resolve, animationSpeed / 5));
@@ -265,9 +327,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateMazeWithTerrains() {
         if (isVisualizing) return;
-        resetBoard();
-        clearLog();
-        addToLog("Generating a new, imperfect maze...");
+        // Clear comparison stats when generating a new maze
+        comparisonStats = [];
+        renderComparisonTable();
+        
+        resetBoard(); // resetBoard also clears log and calls addToLog
+        // clearLog(); // Already called by resetBoard
+        addToLog("Generating a new, imperfect maze..."); // This will be after resetBoard's message
         for (let r = 0; r < NUM_ROWS; r++) {
             for (let c = 0; c < NUM_COLS; c++) {
                 terrainGrid[r][c] = 1;
@@ -309,6 +375,9 @@ document.addEventListener('DOMContentLoaded', () => {
         createGrid();
         toggleButtons(true);
         clearLog();
+        // Clear comparison stats when resetting the board
+        comparisonStats = []; 
+        renderComparisonTable();
         addToLog("Board has been reset. Create a maze or start visualizing!");
     }
 
@@ -320,7 +389,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Setup ---
     createGrid();
+    renderComparisonTable(); // Initial render of the (empty) comparison table
     addToLog("Welcome! Select an algorithm and click 'Generate Maze'.");
+
+    const clearComparisonBtn = document.getElementById('clear-comparison-btn');
+    if (clearComparisonBtn) { // Ensure button exists before adding listener
+        clearComparisonBtn.addEventListener('click', () => {
+            comparisonStats = [];
+            renderComparisonTable();
+            addToLog("Comparison data cleared.");
+        });
+    }
+
     startBtn.addEventListener('click', visualize);
     resetBtn.addEventListener('click', resetBoard);
     mazeBtn.addEventListener('click', generateMazeWithTerrains);

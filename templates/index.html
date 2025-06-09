@@ -25,6 +25,8 @@
                         <option value="astar" selected>A* Search</option>
                         <option value="dijkstra">Dijkstra's</option>
                         <option value="bfs">Breadth-First Search (BFS)</option>
+                        <option value="gbfs">Greedy Best-First Search</option>
+                        <option value="bidirectional_astar">Bidirectional A*</option>
                     </select>
                 </div>
             </div>
@@ -87,7 +89,31 @@
                     than A*.</li>
                 <li><strong>BFS:</strong> Ignores costs and finds the shortest path in terms of steps. Often finds a
                     "dumb" but short path.</li>
+                <li><strong>Greedy Best-First Search (GBFS):</strong> Similar to A*, but only uses the heuristic (estimated distance to goal) to decide which node to explore next. It's fast but may not find the shortest path.</li>
+                <li><strong>Bidirectional A*:</strong> Searches from both the start and end points simultaneously, often finding the path faster by exploring fewer nodes.</li>
             </ul>
+        </div>
+
+        <div class="comparison-container">
+            <h2>Algorithm Run Comparison</h2>
+            <button id="clear-comparison-btn" class="btn">Clear Comparison Data</button>
+            <div class="table-responsive">
+                <table id="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Algorithm</th>
+                            <th>Path Cost</th>
+                            <th>Path Length (steps)</th>
+                            <th>Nodes Explored</th>
+                            <th>Time (ms)</th>
+                            <th>Found Path?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Stats rows will be added here by JS -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
