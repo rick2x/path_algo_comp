@@ -41,6 +41,14 @@
                 <label for="imperfection-slider">Imperfection:</label>
                 <input type="range" min="0" max="100" value="30" class="slider" id="imperfection-slider">
             </div>
+            
+            <!-- New Checkbox Block Start -->
+            <div class="control-group">
+                <label for="diagonal-toggle" class="checkbox-label">Allow Diagonal Movement:</label>
+                <input type="checkbox" id="diagonal-toggle" name="diagonal_movement" class="styled-checkbox">
+            </div>
+            <!-- New Checkbox Block End -->
+
             <div class="control-group">
                 <button id="step-forward-btn" class="btn" disabled>Step Forward</button>
                 <button id="resume-btn" class="btn" disabled>Resume Animation</button>
@@ -99,6 +107,7 @@
                     "dumb" but short path.</li>
                 <li><strong>Greedy Best-First Search (GBFS):</strong> Similar to A*, but only uses the heuristic (estimated distance to goal) to decide which node to explore next. It's fast but may not find the shortest path.</li>
                 <li><strong>Bidirectional A*:</strong> Searches from both the start and end points simultaneously, often finding the path faster by exploring fewer nodes.</li>
+                <li><strong>Diagonal Movement:</strong> When enabled, algorithms can move diagonally (cost ~1.4x cardinal). This may result in different paths and affect heuristic calculations for A*, GBFS, and Bidirectional A*. Corner cutting through walls is prevented.</li>
             </ul>
         </div>
 

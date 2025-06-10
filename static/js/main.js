@@ -163,11 +163,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggleButtons(false); // Disables main buttons, enables step buttons via updateStepButtonStates if paused
 
+        const diagonalToggle = document.getElementById('diagonal-toggle');
+        const allowDiagonal = diagonalToggle.checked;
+
         const payload = {
             grid: terrainGrid,
             start: [startNode.row, startNode.col],
             end: [endNode.row, endNode.col],
-            algorithm: selectedAlgorithm
+            algorithm: selectedAlgorithm,
+            allow_diagonal: allowDiagonal // Added diagonal flag
         };
 
         try {

@@ -37,7 +37,12 @@ class Node:
 
 # --- Pathfinding Algorithms ---
 
-def astar(terrain_grid, start_pos, end_pos):
+# Define neighbor offsets
+CARDINAL_NEIGHBORS = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+DIAGONAL_NEIGHBORS = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+ALL_NEIGHBORS = CARDINAL_NEIGHBORS + DIAGONAL_NEIGHBORS
+
+def astar(terrain_grid, start_pos, end_pos, allow_diagonal=False):
     """A* Search Algorithm"""
     start_node, end_node = Node(None, start_pos), Node(None, end_pos)
     open_list, closed_list = [], set()
@@ -60,19 +65,61 @@ def astar(terrain_grid, start_pos, end_pos):
                 current_node = current_node.parent
             return visited_nodes_in_order, path[::-1]
 
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+        current_r, current_c = current_node.position
+        
+        neighbor_offsets_to_use = CARDINAL_NEIGHBORS
+        if allow_diagonal:
+            neighbor_offsets_to_use = ALL_NEIGHBORS
+
+        for dr, dc in neighbor_offsets_to_use:
+            node_position = (current_r + dr, current_c + dc)
+            
             if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
             
-            terrain_type = terrain_grid[node_position[0]][node_position[1]]
-            if TERRAIN_COSTS.get(terrain_type, float('inf')) == float('inf'): continue
+            terrain_type_at_neighbor = terrain_grid[node_position[0]][node_position[1]]
+            base_movement_cost = TERRAIN_COSTS.get(terrain_type_at_neighbor, float('inf'))
+
+            if base_movement_cost == float('inf'): continue # Neighbor is a wall
+
+            actual_movement_cost = base_movement_cost
+            is_diagonal_move = (dr != 0 and dc != 0)
+
+            if is_diagonal_move and allow_diagonal: # This check implies allow_diagonal is true
+                # Corner cutting prevention
+                # Cell 1 for corner check: (current_r + dr, current_c)
+                # Cell 2 for corner check: (current_r, current_c + dc)
+                terrain_at_corner1 = terrain_grid[current_r + dr][current_c]
+                terrain_at_corner2 = terrain_grid[current_r][current_c + dc]
+                
+                if TERRAIN_COSTS.get(terrain_at_corner1, float('inf')) == float('inf') or \
+                   TERRAIN_COSTS.get(terrain_at_corner2, float('inf')) == float('inf'):
+                    continue # Diagonal move blocked by a corner wall
+                
+                actual_movement_cost *= 1.4 # Apply diagonal factor
+            elif not is_diagonal_move:
+                # Cardinal move, cost is already base_movement_cost
+                pass
+            else: # This case implies is_diagonal_move is true but allow_diagonal is false,
+                  # which shouldn't happen if neighbor_offsets_to_use is correctly set.
+                  # If it does, skip this neighbor.
+                continue
             
             child = Node(current_node, node_position)
             if child.position in closed_list: continue
             
-            movement_cost = TERRAIN_COSTS.get(terrain_type, 1)
-            child.g = current_node.g + movement_cost
-            child.h = abs(child.position[0] - end_node.position[0]) + abs(child.position[1] - end_node.position[1]) # Heuristic
+            child.g = current_node.g + actual_movement_cost
+            
+            # Heuristic calculation
+            dx = abs(child.position[0] - end_node.position[0])
+            dy = abs(child.position[1] - end_node.position[1])
+            if allow_diagonal:
+                D = 1  # Cost of cardinal movement
+                D2 = 1.4 # Cost of diagonal movement (approx sqrt(2))
+                child.h = D * (dx + dy) + (D2 - 2 * D) * min(dx, dy) # Octile distance
+                # This simplifies to: child.h = (dx + dy) - 0.6 * min(dx, dy)
+            else:
+                child.h = dx + dy # Manhattan distance
+            
             child.f = child.g + child.h
 
             if any(child == open_node and child.g >= open_node.g for f, open_node in open_list): continue
@@ -80,7 +127,7 @@ def astar(terrain_grid, start_pos, end_pos):
 
     return visited_nodes_in_order, []
 
-def gbfs(terrain_grid, start_pos, end_pos):
+def gbfs(terrain_grid, start_pos, end_pos, allow_diagonal=False):
     """Greedy Best-First Search Algorithm"""
     start_node, end_node = Node(None, start_pos), Node(None, end_pos)
     open_list, closed_list = [], set()
@@ -89,7 +136,15 @@ def gbfs(terrain_grid, start_pos, end_pos):
     visited_nodes_in_order = []
     rows, cols = len(terrain_grid), len(terrain_grid[0])
 
-    start_node.h = abs(start_node.position[0] - end_node.position[0]) + abs(start_node.position[1] - end_node.position[1])
+    # Calculate h for start_node
+    dx_start = abs(start_node.position[0] - end_node.position[0])
+    dy_start = abs(start_node.position[1] - end_node.position[1])
+    if allow_diagonal:
+        D = 1
+        D2 = 1.4
+        start_node.h = D * (dx_start + dy_start) + (D2 - 2 * D) * min(dx_start, dy_start)
+    else:
+        start_node.h = dx_start + dy_start
     start_node.f = start_node.h # f can be set to h for consistency or ignored
 
     while len(open_list) > 0:
@@ -107,19 +162,51 @@ def gbfs(terrain_grid, start_pos, end_pos):
                 current_node = current_node.parent
             return visited_nodes_in_order, path[::-1]
 
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+        current_r, current_c = current_node.position
+
+        neighbor_offsets_to_use = CARDINAL_NEIGHBORS
+        if allow_diagonal:
+            neighbor_offsets_to_use = ALL_NEIGHBORS
+
+        for dr, dc in neighbor_offsets_to_use:
+            node_position = (current_r + dr, current_c + dc)
             if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
             
-            terrain_type = terrain_grid[node_position[0]][node_position[1]]
-            if TERRAIN_COSTS.get(terrain_type, float('inf')) == float('inf'): continue
+            terrain_type_at_neighbor = terrain_grid[node_position[0]][node_position[1]]
+            base_movement_cost = TERRAIN_COSTS.get(terrain_type_at_neighbor, float('inf'))
+
+            if base_movement_cost == float('inf'): continue # Neighbor is a wall
+            
+            actual_movement_cost = base_movement_cost
+            is_diagonal_move = (dr != 0 and dc != 0)
+
+            if is_diagonal_move and allow_diagonal:
+                terrain_at_corner1 = terrain_grid[current_r + dr][current_c]
+                terrain_at_corner2 = terrain_grid[current_r][current_c + dc]
+                if TERRAIN_COSTS.get(terrain_at_corner1, float('inf')) == float('inf') or \
+                   TERRAIN_COSTS.get(terrain_at_corner2, float('inf')) == float('inf'):
+                    continue
+                actual_movement_cost *= 1.4
+            elif not is_diagonal_move:
+                pass
+            else: # is_diagonal_move is true but allow_diagonal is false
+                continue
             
             child = Node(current_node, node_position)
             if child.position in closed_list: continue
             
-            movement_cost = TERRAIN_COSTS.get(terrain_type, 1)
-            child.g = current_node.g + movement_cost # g is actual cost from start
-            child.h = abs(child.position[0] - end_node.position[0]) + abs(child.position[1] - end_node.position[1]) # Heuristic
+            child.g = current_node.g + actual_movement_cost # g is actual cost from start
+            
+            # Heuristic calculation for child
+            dx_child = abs(child.position[0] - end_node.position[0])
+            dy_child = abs(child.position[1] - end_node.position[1])
+            if allow_diagonal:
+                D = 1
+                D2 = 1.4
+                child.h = D * (dx_child + dy_child) + (D2 - 2 * D) * min(dx_child, dy_child)
+            else:
+                child.h = dx_child + dy_child
+            
             child.f = child.h # For GBFS, f can be considered as h, or g+h if needed for display
 
             # Check if child is in open_list and if new path is better (lower h for GBFS)
@@ -176,7 +263,7 @@ def reconstruct_bi_path(node_fwd, node_bwd):
         
     return path_fwd + path_bwd
 
-def bidirectional_astar(terrain_grid, start_pos, end_pos):
+def bidirectional_astar(terrain_grid, start_pos, end_pos, allow_diagonal=False):
     """Bidirectional A* Search Algorithm"""
     rows, cols = len(terrain_grid), len(terrain_grid[0])
 
@@ -199,16 +286,26 @@ def bidirectional_astar(terrain_grid, start_pos, end_pos):
     
     visited_nodes_in_order = [] # Stores visited nodes for visualization, with direction.
 
-    # Heuristic calculation for forward search: Manhattan distance from current node to end_pos.
-    # h_fwd = abs(current_node.position[0] - end_node_fwd.position[0]) + abs(current_node.position[1] - end_node_fwd.position[1])
-    start_node_fwd.h = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1]) # h_fwd for start node
-    start_node_fwd.f = start_node_fwd.h # g is 0 for start node
+    # Heuristic calculation for forward search (start_node_fwd to end_pos)
+    dx_sf = abs(start_node_fwd.position[0] - end_node_fwd.position[0])
+    dy_sf = abs(start_node_fwd.position[1] - end_node_fwd.position[1])
+    if allow_diagonal:
+        D = 1; D2 = 1.4
+        start_node_fwd.h = D * (dx_sf + dy_sf) + (D2 - 2 * D) * min(dx_sf, dy_sf)
+    else:
+        start_node_fwd.h = dx_sf + dy_sf
+    start_node_fwd.f = start_node_fwd.h 
     heapq.heappush(open_list_fwd, (start_node_fwd.f, start_node_fwd))
 
-    # Heuristic calculation for backward search: Manhattan distance from current node to start_pos.
-    # h_bwd = abs(current_node.position[0] - end_node_bwd.position[0]) + abs(current_node.position[1] - end_node_bwd.position[1])
-    start_node_bwd.h = abs(end_pos[0] - start_pos[0]) + abs(end_pos[1] - start_pos[1]) # h_bwd for start node (which is end_pos)
-    start_node_bwd.f = start_node_bwd.h # g is 0 for start node of backward search
+    # Heuristic calculation for backward search (start_node_bwd to start_pos)
+    dx_sb = abs(start_node_bwd.position[0] - end_node_bwd.position[0])
+    dy_sb = abs(start_node_bwd.position[1] - end_node_bwd.position[1])
+    if allow_diagonal:
+        D = 1; D2 = 1.4
+        start_node_bwd.h = D * (dx_sb + dy_sb) + (D2 - 2 * D) * min(dx_sb, dy_sb)
+    else:
+        start_node_bwd.h = dx_sb + dy_sb
+    start_node_bwd.f = start_node_bwd.h
     heapq.heappush(open_list_bwd, (start_node_bwd.f, start_node_bwd))
 
     meeting_node_pos = None # Stores the position of the meeting node if a path is found
@@ -249,22 +346,46 @@ def bidirectional_astar(terrain_grid, start_pos, end_pos):
                     # The termination condition (min_f_fwd + min_f_bwd >= path_cost) ensures optimality.
 
                 # Explore neighbors of the current forward search node
-                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
-                    node_position = (current_node_fwd.position[0] + new_position[0], current_node_fwd.position[1] + new_position[1])
+                current_r_fwd, current_c_fwd = current_node_fwd.position
+                neighbor_offsets_to_use = CARDINAL_NEIGHBORS
+                if allow_diagonal:
+                    neighbor_offsets_to_use = ALL_NEIGHBORS
+
+                for dr, dc in neighbor_offsets_to_use:
+                    node_position = (current_r_fwd + dr, current_c_fwd + dc)
                     
-                    # Boundary check
                     if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
                     
-                    # Wall check
-                    terrain_type = terrain_grid[node_position[0]][node_position[1]]
-                    cost_val = TERRAIN_COSTS.get(terrain_type, float('inf'))
-                    if cost_val == float('inf'): continue
+                    terrain_type_at_neighbor = terrain_grid[node_position[0]][node_position[1]]
+                    base_movement_cost = TERRAIN_COSTS.get(terrain_type_at_neighbor, float('inf'))
+                    if base_movement_cost == float('inf'): continue
 
-                    # Create new node for forward search
+                    actual_movement_cost = base_movement_cost
+                    is_diagonal_move = (dr != 0 and dc != 0)
+
+                    if is_diagonal_move and allow_diagonal:
+                        terrain_at_corner1 = terrain_grid[current_r_fwd + dr][current_c_fwd]
+                        terrain_at_corner2 = terrain_grid[current_r_fwd][current_c_fwd + dc]
+                        if TERRAIN_COSTS.get(terrain_at_corner1, float('inf')) == float('inf') or \
+                           TERRAIN_COSTS.get(terrain_at_corner2, float('inf')) == float('inf'):
+                            continue
+                        actual_movement_cost *= 1.4
+                    elif not is_diagonal_move:
+                        pass
+                    else: # is_diagonal_move true, allow_diagonal false
+                        continue
+                    
                     child_fwd = Node(current_node_fwd, node_position)
-                    child_fwd.g = current_node_fwd.g + cost_val # Cost from start to child
-                    # Heuristic for forward search: Manhattan distance to end_node_fwd (target)
-                    child_fwd.h = abs(child_fwd.position[0] - end_node_fwd.position[0]) + abs(child_fwd.position[1] - end_node_fwd.position[1])
+                    child_fwd.g = current_node_fwd.g + actual_movement_cost # Cost from start to child
+                    
+                    # Heuristic for forward search child (child_fwd to end_pos)
+                    dx_cf = abs(child_fwd.position[0] - end_node_fwd.position[0])
+                    dy_cf = abs(child_fwd.position[1] - end_node_fwd.position[1])
+                    if allow_diagonal:
+                        D = 1; D2 = 1.4
+                        child_fwd.h = D * (dx_cf + dy_cf) + (D2 - 2 * D) * min(dx_cf, dy_cf)
+                    else:
+                        child_fwd.h = dx_cf + dy_cf
                     child_fwd.f = child_fwd.g + child_fwd.h
 
                     # If child is in closed_list_fwd and the existing node has a better or equal f-score, skip.
@@ -304,22 +425,44 @@ def bidirectional_astar(terrain_grid, start_pos, end_pos):
                         final_bwd_node = current_node_bwd
                 
                 # Explore neighbors of the current backward search node
-                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
-                    node_position = (current_node_bwd.position[0] + new_position[0], current_node_bwd.position[1] + new_position[1])
+                current_r_bwd, current_c_bwd = current_node_bwd.position
+                # neighbor_offsets_to_use is already defined based on allow_diagonal from fwd search section, can reuse
+                
+                for dr, dc in neighbor_offsets_to_use: # Using same neighbor_offsets_to_use
+                    node_position = (current_r_bwd + dr, current_c_bwd + dc)
 
-                    # Boundary check
                     if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
                     
-                    # Wall check
-                    terrain_type = terrain_grid[node_position[0]][node_position[1]]
-                    cost_val = TERRAIN_COSTS.get(terrain_type, float('inf'))
-                    if cost_val == float('inf'): continue
+                    terrain_type_at_neighbor = terrain_grid[node_position[0]][node_position[1]]
+                    base_movement_cost = TERRAIN_COSTS.get(terrain_type_at_neighbor, float('inf'))
+                    if base_movement_cost == float('inf'): continue
 
-                    # Create new node for backward search
+                    actual_movement_cost = base_movement_cost
+                    is_diagonal_move = (dr != 0 and dc != 0)
+
+                    if is_diagonal_move and allow_diagonal:
+                        terrain_at_corner1 = terrain_grid[current_r_bwd + dr][current_c_bwd]
+                        terrain_at_corner2 = terrain_grid[current_r_bwd][current_c_bwd + dc]
+                        if TERRAIN_COSTS.get(terrain_at_corner1, float('inf')) == float('inf') or \
+                           TERRAIN_COSTS.get(terrain_at_corner2, float('inf')) == float('inf'):
+                            continue
+                        actual_movement_cost *= 1.4
+                    elif not is_diagonal_move:
+                        pass
+                    else: # is_diagonal_move true, allow_diagonal false
+                        continue
+
                     child_bwd = Node(current_node_bwd, node_position)
-                    child_bwd.g = current_node_bwd.g + cost_val # Cost from end to child (following path backward)
-                    # Heuristic for backward search: Manhattan distance to end_node_bwd (which is start_pos)
-                    child_bwd.h = abs(child_bwd.position[0] - end_node_bwd.position[0]) + abs(child_bwd.position[1] - end_node_bwd.position[1])
+                    child_bwd.g = current_node_bwd.g + actual_movement_cost # Cost from end to child
+                    
+                    # Heuristic for backward search child (child_bwd to start_pos)
+                    dx_cb = abs(child_bwd.position[0] - end_node_bwd.position[0])
+                    dy_cb = abs(child_bwd.position[1] - end_node_bwd.position[1])
+                    if allow_diagonal:
+                        D = 1; D2 = 1.4
+                        child_bwd.h = D * (dx_cb + dy_cb) + (D2 - 2 * D) * min(dx_cb, dy_cb)
+                    else:
+                        child_bwd.h = dx_cb + dy_cb
                     child_bwd.f = child_bwd.g + child_bwd.h
                     
                     # If child is in closed_list_bwd and the existing node has a better or equal f-score, skip.
@@ -351,7 +494,7 @@ def bidirectional_astar(terrain_grid, start_pos, end_pos):
     return visited_nodes_in_order, [], float('inf') # No path found or one of the lists became empty before meeting
 
 
-def dijkstra(terrain_grid, start_pos, end_pos):
+def dijkstra(terrain_grid, start_pos, end_pos, allow_diagonal=False):
     """Dijkstra's Algorithm: A* where heuristic is always 0."""
     start_node, end_node = Node(None, start_pos), Node(None, end_pos)
     open_list, closed_list = [], set()
@@ -372,17 +515,41 @@ def dijkstra(terrain_grid, start_pos, end_pos):
             while current_node is not None: path.append(current_node.position); current_node = current_node.parent
             return visited_nodes_in_order, path[::-1]
 
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+        current_r, current_c = current_node.position
+        
+        neighbor_offsets_to_use = CARDINAL_NEIGHBORS
+        if allow_diagonal:
+            neighbor_offsets_to_use = ALL_NEIGHBORS
+
+        for dr, dc in neighbor_offsets_to_use:
+            node_position = (current_r + dr, current_c + dc)
+
             if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
-            terrain_type = terrain_grid[node_position[0]][node_position[1]]
-            if TERRAIN_COSTS.get(terrain_type, float('inf')) == float('inf'): continue
+            
+            terrain_type_at_neighbor = terrain_grid[node_position[0]][node_position[1]]
+            base_movement_cost = TERRAIN_COSTS.get(terrain_type_at_neighbor, float('inf'))
+
+            if base_movement_cost == float('inf'): continue # Neighbor is a wall
+
+            actual_movement_cost = base_movement_cost
+            is_diagonal_move = (dr != 0 and dc != 0)
+
+            if is_diagonal_move and allow_diagonal:
+                terrain_at_corner1 = terrain_grid[current_r + dr][current_c]
+                terrain_at_corner2 = terrain_grid[current_r][current_c + dc]
+                if TERRAIN_COSTS.get(terrain_at_corner1, float('inf')) == float('inf') or \
+                   TERRAIN_COSTS.get(terrain_at_corner2, float('inf')) == float('inf'):
+                    continue
+                actual_movement_cost *= 1.4
+            elif not is_diagonal_move:
+                pass # Cost is already base_movement_cost
+            else: # is_diagonal_move is true but allow_diagonal is false
+                continue
             
             child = Node(current_node, node_position)
             if child.position in closed_list: continue
             
-            movement_cost = TERRAIN_COSTS.get(terrain_type, 1)
-            child.g = current_node.g + movement_cost
+            child.g = current_node.g + actual_movement_cost
             child.h = 0  # The only difference from A*!
             child.f = child.g
 
@@ -391,7 +558,7 @@ def dijkstra(terrain_grid, start_pos, end_pos):
 
     return visited_nodes_in_order, []
 
-def bfs(terrain_grid, start_pos, end_pos):
+def bfs(terrain_grid, start_pos, end_pos, allow_diagonal=False):
     """Breadth-First Search: Ignores costs, finds shortest path in steps."""
     start_node, end_node = Node(None, start_pos), Node(None, end_pos)
     open_list, closed_list = deque([start_node]), set([start_node.position])
@@ -422,15 +589,42 @@ def bfs(terrain_grid, start_pos, end_pos):
             visited_nodes_in_order[-1]['g'] = total_cost # Store the calculated total_cost
             return visited_nodes_in_order, path
 
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
+        current_r, current_c = current_node.position
+
+        neighbor_offsets_to_use = CARDINAL_NEIGHBORS
+        if allow_diagonal:
+            neighbor_offsets_to_use = ALL_NEIGHBORS
+
+        for dr, dc in neighbor_offsets_to_use:
+            node_position = (current_r + dr, current_c + dc)
+
             if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
-            terrain_type = terrain_grid[node_position[0]][node_position[1]]
-            if TERRAIN_COSTS.get(terrain_type, float('inf')) == float('inf'): continue
-            if node_position in closed_list: continue
+            
+            terrain_type_at_neighbor = terrain_grid[node_position[0]][node_position[1]]
+            # Standard wall check for the target neighbor cell
+            if TERRAIN_COSTS.get(terrain_type_at_neighbor, float('inf')) == float('inf'): continue
+
+            is_diagonal_move = (dr != 0 and dc != 0)
+
+            if is_diagonal_move and allow_diagonal:
+                # Corner cutting prevention for BFS
+                terrain_at_corner1 = terrain_grid[current_r + dr][current_c]
+                terrain_at_corner2 = terrain_grid[current_r][current_c + dc]
+                if TERRAIN_COSTS.get(terrain_at_corner1, float('inf')) == float('inf') or \
+                   TERRAIN_COSTS.get(terrain_at_corner2, float('inf')) == float('inf'):
+                    continue # Diagonal move blocked by a corner wall
+            elif not is_diagonal_move:
+                # Cardinal move, no special checks needed beyond boundary and wall check already done
+                pass
+            else: # This case implies is_diagonal_move is true but allow_diagonal is false,
+                  # which shouldn't happen if neighbor_offsets_to_use is correctly set.
+                  # If it does, skip this neighbor.
+                continue
+
+            if node_position in closed_list: continue # Check after potential skips for walls/corners
             
             child = Node(current_node, node_position)
-            child.g = current_node.g + 1 # g is just the number of steps
+            child.g = current_node.g + 1 # g is just the number of steps for BFS
             closed_list.add(child.position)
             open_list.append(child)
             
@@ -459,6 +653,7 @@ def solve_maze():
     start_pos_list = data['start']
     end_pos_list = data['end']
     algorithm = data.get('algorithm', 'astar') # Default to astar if not provided
+    allow_diagonal = data.get('allow_diagonal', False) # Retrieve allow_diagonal preference
 
     if not isinstance(terrain_grid, list) or not all(isinstance(row, list) for row in terrain_grid):
         return jsonify({'error': 'Invalid input: Grid must be a list of lists.'}), 400
@@ -509,15 +704,15 @@ def solve_maze():
     path_cost_val = None # Initialize path_cost_val
     
     if algorithm == 'dijkstra':
-        visited_nodes, path = dijkstra(terrain_grid, start_pos, end_pos)
+        visited_nodes, path = dijkstra(terrain_grid, start_pos, end_pos, allow_diagonal=allow_diagonal)
     elif algorithm == 'bfs':
-        visited_nodes, path = bfs(terrain_grid, start_pos, end_pos)
+        visited_nodes, path = bfs(terrain_grid, start_pos, end_pos, allow_diagonal=allow_diagonal)
     elif algorithm == 'gbfs':
-        visited_nodes, path = gbfs(terrain_grid, start_pos, end_pos)
+        visited_nodes, path = gbfs(terrain_grid, start_pos, end_pos, allow_diagonal=allow_diagonal)
     elif algorithm == 'bidirectional_astar':
-        visited_nodes, path, path_cost_val = bidirectional_astar(terrain_grid, start_pos, end_pos)
+        visited_nodes, path, path_cost_val = bidirectional_astar(terrain_grid, start_pos, end_pos, allow_diagonal=allow_diagonal)
     else: # Default to astar
-        visited_nodes, path = astar(terrain_grid, start_pos, end_pos)
+        visited_nodes, path = astar(terrain_grid, start_pos, end_pos, allow_diagonal=allow_diagonal)
         
     execution_time = (time.time() - start_time) * 1000
 
