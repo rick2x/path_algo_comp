@@ -180,6 +180,10 @@ h1 {
     background-size: 20px 20px;
 }
 
+.cell.forest {
+    background-color: #228B22; /* Forest Green */
+}
+
 .cell.closed {
     background-color: var(--closed-color-overlay);
 }
@@ -203,6 +207,12 @@ h1 {
         linear-gradient(var(--path-color-overlay), var(--path-color-overlay)),
         radial-gradient(#8d6e63 20%, transparent 20%),
         radial-gradient(#6d4c41 20%, transparent 20%);
+}
+
+.cell.path.forest {
+    background-image:
+        linear-gradient(var(--path-color-overlay), var(--path-color-overlay));
+    background-color: #228B22; /* Forest Green, overlay will be on top */
 }
 
 @keyframes path-glow {
@@ -339,6 +349,10 @@ h1 {
 
 .legend-color.mud {
     background-color: #795548;
+}
+
+.legend-color.forest {
+    background-color: #228B22; /* Forest Green */
 }
 
 .legend-color.closed {
