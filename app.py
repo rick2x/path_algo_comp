@@ -12,7 +12,8 @@ TERRAIN_COSTS = {
     0: 1,            # Plain
     1: float('inf'), # Wall
     2: 5,            # Water
-    3: 10            # Mud
+    3: 10,           # Mud
+    4: 3             # Forest
 }
 
 class Node:
@@ -406,13 +407,20 @@ def bfs(terrain_grid, start_pos, end_pos):
         if current_node == end_node:
             path, total_cost = [], 0
             temp = current_node
-            while temp is not None:
-                path.append(temp.position)
+            # Calculate cost from entering nodes, excluding the start node's own cost.
+            # The path reconstruction will go from end_node to start_node.
+            # We add costs of nodes in path until we reach the start_node's child.
+            path_reconstruction_list = []
+            while temp.parent is not None: # Iterate until temp is the child of the start node
+                path_reconstruction_list.append(temp.position)
                 terrain_type = terrain_grid[temp.position[0]][temp.position[1]]
                 total_cost += TERRAIN_COSTS.get(terrain_type, 1)
                 temp = temp.parent
-            visited_nodes_in_order[-1]['g'] = total_cost
-            return visited_nodes_in_order, path[::-1]
+            path_reconstruction_list.append(temp.position) # Add the start node position
+
+            path = path_reconstruction_list[::-1] # Reverse to get path from start to end
+            visited_nodes_in_order[-1]['g'] = total_cost # Store the calculated total_cost
+            return visited_nodes_in_order, path
 
         for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])

@@ -41,6 +41,11 @@
                 <label for="imperfection-slider">Imperfection:</label>
                 <input type="range" min="0" max="100" value="30" class="slider" id="imperfection-slider">
             </div>
+            <div class="control-group">
+                <button id="step-forward-btn" class="btn" disabled>Step Forward</button>
+                <button id="resume-btn" class="btn" disabled>Resume Animation</button>
+                <!-- <button id="step-backward-btn" class="btn" disabled>Step Backward</button> -->
+            </div>
         </div>
 
         <div class="main-content">
@@ -71,6 +76,9 @@
             </div>
             <div class="legend-item">
                 <div class="legend-color mud"></div> Mud (Cost 10)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color forest"></div> Forest (Cost 3)
             </div>
             <div class="legend-item">
                 <div class="legend-color closed"></div> Evaluated
