@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const speedSlider = document.getElementById('speed-slider');
     const storyLog = document.getElementById('story-log');
     const pathCostDisplay = document.getElementById('path-cost-display');
+    const comparisonTableBody = document.querySelector("#comparison-table tbody");
+    const clearComparisonBtn = document.getElementById('clear-comparison-btn');
 
     // --- Grid & State Configuration ---
     const NUM_COLS = 50;
@@ -33,11 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Comparison Table ---
     function renderComparisonTable() {
-        const tableBody = document.querySelector("#comparison-table tbody");
-        if (!tableBody) return; // Guard clause if table doesn't exist
-        tableBody.innerHTML = ''; // Clear existing rows
+        // const tableBody = document.querySelector("#comparison-table tbody"); // Cached as comparisonTableBody
+        if (!comparisonTableBody) return; // Guard clause if table doesn't exist
+        comparisonTableBody.innerHTML = ''; // Clear existing rows
         comparisonStats.forEach(stat => {
-            const row = tableBody.insertRow();
+            const row = comparisonTableBody.insertRow();
             row.insertCell().textContent = stat.algorithmName;
             row.insertCell().textContent = stat.pathCost;
             row.insertCell().textContent = stat.pathLength;
@@ -247,8 +249,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (algorithm === 'gbfs') {
                 logMessage = `Evaluating [${row}, ${col}] based on heuristic. H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, G: <span class="highlight">${nodeData.g}</span>.`;
             } else if (algorithm === 'bidirectional_astar') {
-                // The 'dir' field could be used here: nodeData.dir === 'fwd' ? '(Fwd)' : '(Bwd)'
-                logMessage = `Evaluating [${row}, ${col}] (Bi-A*). G: <span class="highlight">${nodeData.g}</span>, H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, F: <span class="highlight">${nodeData.f.toFixed(0)}</span>.`;
+                const direction = nodeData.dir === 'fwd' ? 'Fwd' : (nodeData.dir === 'bwd' ? 'Bwd' : 'Dir?'); // Added a fallback for safety
+                logMessage = `Evaluating [${row}, ${col}] (Bi-A* ${direction}). G: <span class="highlight">${nodeData.g}</span>, H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, F: <span class="highlight">${nodeData.f.toFixed(0)}</span>.`;
             }
             else { // A* and Dijkstra
                 logMessage = `Evaluating [${row}, ${col}]. G: <span class="highlight">${nodeData.g}</span>, H: <span class="highlight">${nodeData.h.toFixed(0)}</span>, F: <span class="highlight">${nodeData.f.toFixed(0)}</span>.`;
@@ -392,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderComparisonTable(); // Initial render of the (empty) comparison table
     addToLog("Welcome! Select an algorithm and click 'Generate Maze'.");
 
-    const clearComparisonBtn = document.getElementById('clear-comparison-btn');
+    // const clearComparisonBtn = document.getElementById('clear-comparison-btn'); // Cached
     if (clearComparisonBtn) { // Ensure button exists before adding listener
         clearComparisonBtn.addEventListener('click', () => {
             comparisonStats = [];

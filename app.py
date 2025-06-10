@@ -179,144 +179,175 @@ def bidirectional_astar(terrain_grid, start_pos, end_pos):
     """Bidirectional A* Search Algorithm"""
     rows, cols = len(terrain_grid), len(terrain_grid[0])
 
+    # Node initialization for forward search (from start to end)
     start_node_fwd = Node(None, start_pos)
     end_node_fwd = Node(None, end_pos) # Target for forward search
     
+    # Node initialization for backward search (from end to start)
     start_node_bwd = Node(None, end_pos) # Starting point for backward search
     end_node_bwd = Node(None, start_pos) # Target for backward search
 
+    # open_list_fwd: Priority queue for nodes to be evaluated in the forward search. Stores (f_score, node).
+    # open_list_bwd: Priority queue for nodes to be evaluated in the backward search. Stores (f_score, node).
     open_list_fwd, open_list_bwd = [], []
-    # Using dicts for closed_lists to store the node itself for path reconstruction and g-score checks
+    
+    # closed_list_fwd: Dictionary to store nodes already evaluated in the forward search {position: node}.
+    #                  Used to avoid reprocessing nodes and for path reconstruction.
+    # closed_list_bwd: Dictionary to store nodes already evaluated in the backward search {position: node}.
     closed_list_fwd, closed_list_bwd = {}, {} 
     
-    visited_nodes_in_order = []
+    visited_nodes_in_order = [] # Stores visited nodes for visualization, with direction.
 
-    # Heuristics
-    start_node_fwd.h = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1])
-    start_node_fwd.f = start_node_fwd.h
+    # Heuristic calculation for forward search: Manhattan distance from current node to end_pos.
+    # h_fwd = abs(current_node.position[0] - end_node_fwd.position[0]) + abs(current_node.position[1] - end_node_fwd.position[1])
+    start_node_fwd.h = abs(start_pos[0] - end_pos[0]) + abs(start_pos[1] - end_pos[1]) # h_fwd for start node
+    start_node_fwd.f = start_node_fwd.h # g is 0 for start node
     heapq.heappush(open_list_fwd, (start_node_fwd.f, start_node_fwd))
 
-    start_node_bwd.h = abs(end_pos[0] - start_pos[0]) + abs(end_pos[1] - start_pos[1])
-    start_node_bwd.f = start_node_bwd.h
+    # Heuristic calculation for backward search: Manhattan distance from current node to start_pos.
+    # h_bwd = abs(current_node.position[0] - end_node_bwd.position[0]) + abs(current_node.position[1] - end_node_bwd.position[1])
+    start_node_bwd.h = abs(end_pos[0] - start_pos[0]) + abs(end_pos[1] - start_pos[1]) # h_bwd for start node (which is end_pos)
+    start_node_bwd.f = start_node_bwd.h # g is 0 for start node of backward search
     heapq.heappush(open_list_bwd, (start_node_bwd.f, start_node_bwd))
 
-    meeting_node_pos = None
-    path_cost = float('inf')
+    meeting_node_pos = None # Stores the position of the meeting node if a path is found
+    path_cost = float('inf') # Cost of the best path found so far, initialized to infinity
 
+    # Main loop: continues as long as there are nodes to explore in both search directions.
+    # The search can terminate early if a condition (min_f_fwd + min_f_bwd >= path_cost) is met.
     while open_list_fwd and open_list_bwd:
         # Forward search step
-        if open_list_fwd:
-            f_fwd, current_node_fwd = heapq.heappop(open_list_fwd)
+        if open_list_fwd: # Check if there are nodes to process in the forward search
+            f_fwd, current_node_fwd = heapq.heappop(open_list_fwd) # Get node with smallest f-score
             
-            if current_node_fwd.position in closed_list_fwd and closed_list_fwd[current_node_fwd.position].f < f_fwd:
-                pass # Already found a better path to this node
+            # If this node position is already in closed_list_fwd with a better or equal f-score, skip.
+            if current_node_fwd.position in closed_list_fwd and \
+               closed_list_fwd[current_node_fwd.position].f <= f_fwd:
+                pass 
             else:
+                # Add current node to closed list of forward search
                 closed_list_fwd[current_node_fwd.position] = current_node_fwd
+                # Record visited node for visualization
                 visited_nodes_in_order.append({'pos': current_node_fwd.position, 'g': current_node_fwd.g, 'h': current_node_fwd.h, 'f': current_node_fwd.f, 'dir': 'fwd'})
 
+                # Check if the current node from forward search is in the closed list of backward search.
+                # This indicates a meeting point of the two searches.
                 if current_node_fwd.position in closed_list_bwd:
-                    # Meeting point found
                     node_from_bwd_search = closed_list_bwd[current_node_fwd.position]
-                    current_total_cost = current_node_fwd.g + node_from_bwd_search.g
+                    current_total_cost = current_node_fwd.g + node_from_bwd_search.g # g-cost from start + g-cost from end
+                    
+                    # If this path is better than any previously found path, update path_cost and meeting details.
                     if current_total_cost < path_cost:
                         path_cost = current_total_cost
                         meeting_node_pos = current_node_fwd.position
-                        # Store the nodes that met for path reconstruction
-                        final_fwd_node = current_node_fwd
+                        # These nodes represent the meeting point from both directions for the best path found so far.
+                        # They are used by reconstruct_bi_path.
+                        final_fwd_node = current_node_fwd 
                         final_bwd_node = node_from_bwd_search
-                    # Potential optimization: check if f_fwd + f_bwd_min >= path_cost, if so, break.
-                    # For now, we continue until one list is empty or a tighter condition is met.
+                    # The search continues even after finding a meeting point because a shorter path might still be discovered.
+                    # The termination condition (min_f_fwd + min_f_bwd >= path_cost) ensures optimality.
 
-
-                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                # Explore neighbors of the current forward search node
+                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
                     node_position = (current_node_fwd.position[0] + new_position[0], current_node_fwd.position[1] + new_position[1])
+                    
+                    # Boundary check
                     if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
                     
+                    # Wall check
                     terrain_type = terrain_grid[node_position[0]][node_position[1]]
                     cost_val = TERRAIN_COSTS.get(terrain_type, float('inf'))
                     if cost_val == float('inf'): continue
 
+                    # Create new node for forward search
                     child_fwd = Node(current_node_fwd, node_position)
-                    child_fwd.g = current_node_fwd.g + cost_val
+                    child_fwd.g = current_node_fwd.g + cost_val # Cost from start to child
+                    # Heuristic for forward search: Manhattan distance to end_node_fwd (target)
                     child_fwd.h = abs(child_fwd.position[0] - end_node_fwd.position[0]) + abs(child_fwd.position[1] - end_node_fwd.position[1])
                     child_fwd.f = child_fwd.g + child_fwd.h
 
+                    # If child is in closed_list_fwd and the existing node has a better or equal f-score, skip.
                     if node_position in closed_list_fwd and closed_list_fwd[node_position].f <= child_fwd.f:
                         continue
                     
-                    # Check if in open list and if new path is worse
-                    # This check is more complex for heapq. A simpler way is to allow duplicates and rely on heappop to get the best.
-                    # Or, if a node is already in open_list_fwd with a smaller f value, skip.
-                    # For simplicity, we push and let heapq sort it out. If a better path is found later, closed_list check will handle it.
+                    # If child is in open_list_fwd with a better or equal f-score, skip.
+                    # This check is complex with heapq. Simpler to add and let heappop find the best.
+                    # The closed list check above handles cases where a node is re-expanded.
                     heapq.heappush(open_list_fwd, (child_fwd.f, child_fwd))
 
-        # Backward search step
-        if open_list_bwd:
-            f_bwd, current_node_bwd = heapq.heappop(open_list_bwd)
+        # Backward search step (similar logic to forward search, but directions and targets are reversed)
+        if open_list_bwd: # Check if there are nodes to process in the backward search
+            f_bwd, current_node_bwd = heapq.heappop(open_list_bwd) # Get node with smallest f-score
 
-            if current_node_bwd.position in closed_list_bwd and closed_list_bwd[current_node_bwd.position].f < f_bwd:
+            # If this node position is already in closed_list_bwd with a better or equal f-score, skip.
+            if current_node_bwd.position in closed_list_bwd and \
+               closed_list_bwd[current_node_bwd.position].f <= f_bwd:
                 pass
             else:
+                # Add current node to closed list of backward search
                 closed_list_bwd[current_node_bwd.position] = current_node_bwd
+                # Record visited node for visualization
                 visited_nodes_in_order.append({'pos': current_node_bwd.position, 'g': current_node_bwd.g, 'h': current_node_bwd.h, 'f': current_node_bwd.f, 'dir': 'bwd'})
 
+                # Check if the current node from backward search is in the closed list of forward search.
                 if current_node_bwd.position in closed_list_fwd:
-                     # Meeting point found
                     node_from_fwd_search = closed_list_fwd[current_node_bwd.position]
-                    current_total_cost = current_node_bwd.g + node_from_fwd_search.g
+                    current_total_cost = current_node_bwd.g + node_from_fwd_search.g # g-cost from end + g-cost from start
+                    
+                    # If this path is better, update path_cost and meeting details.
                     if current_total_cost < path_cost:
                         path_cost = current_total_cost
                         meeting_node_pos = current_node_bwd.position
+                        # These nodes represent the meeting point from both directions for the best path found so far.
                         final_fwd_node = node_from_fwd_search
                         final_bwd_node = current_node_bwd
-
-                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                
+                # Explore neighbors of the current backward search node
+                for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
                     node_position = (current_node_bwd.position[0] + new_position[0], current_node_bwd.position[1] + new_position[1])
+
+                    # Boundary check
                     if not (0 <= node_position[0] < rows and 0 <= node_position[1] < cols): continue
                     
+                    # Wall check
                     terrain_type = terrain_grid[node_position[0]][node_position[1]]
                     cost_val = TERRAIN_COSTS.get(terrain_type, float('inf'))
                     if cost_val == float('inf'): continue
 
+                    # Create new node for backward search
                     child_bwd = Node(current_node_bwd, node_position)
-                    child_bwd.g = current_node_bwd.g + cost_val
+                    child_bwd.g = current_node_bwd.g + cost_val # Cost from end to child (following path backward)
+                    # Heuristic for backward search: Manhattan distance to end_node_bwd (which is start_pos)
                     child_bwd.h = abs(child_bwd.position[0] - end_node_bwd.position[0]) + abs(child_bwd.position[1] - end_node_bwd.position[1])
                     child_bwd.f = child_bwd.g + child_bwd.h
                     
+                    # If child is in closed_list_bwd and the existing node has a better or equal f-score, skip.
                     if node_position in closed_list_bwd and closed_list_bwd[node_position].f <= child_bwd.f:
                         continue
                     heapq.heappush(open_list_bwd, (child_bwd.f, child_bwd))
         
-        # Termination condition improvement: if the sum of smallest f-values in both open lists >= path_cost found so far
-        if open_list_fwd and open_list_bwd and meeting_node_pos:
-            min_f_fwd = open_list_fwd[0][0]
-            min_f_bwd = open_list_bwd[0][0]
-            if min_f_fwd + min_f_bwd >= path_cost: # Heuristic admissibility adjustment might be needed here for correctness in some variants.
-                                                 # For standard A*, f = g+h. If h is admissible, this should be fine.
-                                                 # The path_cost is g1+g2. We are comparing f1+f2 with g1+g2.
-                                                 # This condition is more complex than simple meeting. A simpler stop is when one search meets a closed node of another.
-                                                 # The provided logic already updates path_cost when a meeting occurs.
-                                                 # The loop will continue to find potentially better meeting points.
-                break # Terminate the while loop if no better path can be found
-                # pass # Continue searching for better paths if any -> Old behavior
-
-    if meeting_node_pos: # This means path_cost is not float('inf')
-        # Reconstruct path using the stored final_fwd_node and final_bwd_node corresponding to the best path_cost
-        # Need to ensure these nodes are correctly captured when path_cost is updated.
-        # Re-fetch from closed lists using meeting_node_pos to be sure.
-        node_fwd_at_meet = closed_list_fwd[meeting_node_pos]
-        node_bwd_at_meet = closed_list_bwd[meeting_node_pos]
-        
-        path = reconstruct_bi_path(node_fwd_at_meet, node_bwd_at_meet)
-        # The g-value for the final path needs to be correctly reported.
-        # The 'g' in visited_nodes_in_order for the meeting node might be from one direction.
-        # We can add a final entry for the meeting node with the total cost.
-        # For now, the path_cost variable holds the correct total g-cost.
-        # The last element in visited_nodes_in_order might not be the meeting node or have the final g.
-        # This can be refined if specific display of final path cost at meeting point is needed.
+        # Termination Condition:
+        # The loop breaks if a path has been found (meeting_node_pos is not None) AND
+        # the sum of the minimum f-scores from both open lists (min_f_fwd + min_f_bwd)
+        # is greater than or equal to the cost of the best path found so far (path_cost).
+        # This ensures that any potential path explored further will not be better than the current best path.
+        # This condition relies on the heuristic being admissible (never overestimating the true cost).
+        if open_list_fwd and open_list_bwd and meeting_node_pos: # Check only if open lists are not empty and a path exists
+            min_f_fwd = open_list_fwd[0][0] # Smallest f-score in forward open list
+            min_f_bwd = open_list_bwd[0][0] # Smallest f-score in backward open list
+            if min_f_fwd + min_f_bwd >= path_cost:
+                break # Terminate: no better path can be found.
+    
+    # Path Reconstruction:
+    # If a meeting_node_pos was set (meaning a path was found and path_cost < infinity),
+    # reconstruct the path.
+    if meeting_node_pos:
+        # final_fwd_node and final_bwd_node were stored when the best path_cost was updated.
+        # These are the nodes at the meeting point from their respective search directions.
+        path = reconstruct_bi_path(final_fwd_node, final_bwd_node)
         return visited_nodes_in_order, path, path_cost
         
-    return visited_nodes_in_order, [], float('inf') # Return inf cost if no path
+    return visited_nodes_in_order, [], float('inf') # No path found or one of the lists became empty before meeting
 
 
 def dijkstra(terrain_grid, start_pos, end_pos):
@@ -406,11 +437,66 @@ def index():
 @app.route('/solve', methods=['POST'])
 def solve_maze():
     data = request.get_json()
-    terrain_grid = data['grid']
-    start_pos = tuple(data['start'])
-    end_pos = tuple(data['end'])
-    algorithm = data.get('algorithm', 'astar')
 
+    # Input Validation
+    if not data:
+        return jsonify({'error': 'Invalid input: No data provided.'}), 400
+    
+    required_keys = ['grid', 'start', 'end']
+    for key in required_keys:
+        if key not in data:
+            return jsonify({'error': f'Invalid input: Missing key: {key}.'}), 400
+
+    terrain_grid = data['grid']
+    start_pos_list = data['start']
+    end_pos_list = data['end']
+    algorithm = data.get('algorithm', 'astar') # Default to astar if not provided
+
+    if not isinstance(terrain_grid, list) or not all(isinstance(row, list) for row in terrain_grid):
+        return jsonify({'error': 'Invalid input: Grid must be a list of lists.'}), 400
+    
+    if not terrain_grid or not terrain_grid[0]: # Check if grid is empty or rows are empty
+        return jsonify({'error': 'Invalid input: Grid cannot be empty.'}), 400
+
+    rows = len(terrain_grid)
+    cols = len(terrain_grid[0])
+
+    for r_idx, row in enumerate(terrain_grid):
+        if len(row) != cols:
+            return jsonify({'error': f'Invalid input: All grid rows must have the same length. Row {r_idx} has length {len(row)}, expected {cols}.'}), 400
+        for c_idx, cell in enumerate(row):
+            if not isinstance(cell, int) and not isinstance(cell, float): # Allow float for potential future use, though current TERRAIN_COSTS uses int keys
+                return jsonify({'error': f'Invalid input: Grid cells must be numbers. Cell at ({r_idx},{c_idx}) is not a number.'}), 400
+            # Further check if cell value is a valid key in TERRAIN_COSTS could be added if strict adherence to defined terrain types is required.
+            # For now, we assume unknown terrain types will default to a high cost or be handled by TERRAIN_COSTS.get()
+
+    if not (isinstance(start_pos_list, list) or isinstance(start_pos_list, tuple)) or len(start_pos_list) != 2:
+        return jsonify({'error': 'Invalid input: Start position must be a list or tuple of two integers.'}), 400
+    if not all(isinstance(coord, int) for coord in start_pos_list):
+        return jsonify({'error': 'Invalid input: Start coordinates must be integers.'}), 400
+    
+    if not (isinstance(end_pos_list, list) or isinstance(end_pos_list, tuple)) or len(end_pos_list) != 2:
+        return jsonify({'error': 'Invalid input: End position must be a list or tuple of two integers.'}), 400
+    if not all(isinstance(coord, int) for coord in end_pos_list):
+        return jsonify({'error': 'Invalid input: End coordinates must be integers.'}), 400
+
+    start_pos = tuple(start_pos_list)
+    end_pos = tuple(end_pos_list)
+
+    if not (0 <= start_pos[0] < rows and 0 <= start_pos[1] < cols):
+        return jsonify({'error': 'Invalid input: Start coordinates out of bounds.'}), 400
+    if not (0 <= end_pos[0] < rows and 0 <= end_pos[1] < cols):
+        return jsonify({'error': 'Invalid input: End coordinates out of bounds.'}), 400
+
+    start_terrain_type = terrain_grid[start_pos[0]][start_pos[1]]
+    if TERRAIN_COSTS.get(start_terrain_type, float('inf')) == float('inf'):
+        return jsonify({'error': 'Invalid input: Start position is on a wall.'}), 400
+    
+    end_terrain_type = terrain_grid[end_pos[0]][end_pos[1]]
+    if TERRAIN_COSTS.get(end_terrain_type, float('inf')) == float('inf'):
+        return jsonify({'error': 'Invalid input: End position is on a wall.'}), 400
+    
+    # All validations passed, proceed with pathfinding
     start_time = time.time()
     path_cost_val = None # Initialize path_cost_val
     
