@@ -6,12 +6,21 @@
     --light-text: #dcdcdc;
     --border-color: #e94560;
 
+    --wall-color: #303030;
+    --plains-color: #b8aaaa;
+    --water-color: #60A5FA;
+    --mud-color: #A1662F;
+    --forest-color: #228B22;
+
     --start-color: #4caf50;
     --end-color: #f44336;
-    --wall-color: #0f3460;
-    --path-color: #ffeb3b;
-    --path-color-overlay: rgba(255, 235, 59, 0.5);
-    --closed-color-overlay: rgba(255, 82, 82, 0.35);
+
+    --path-visited-color: #96f8e8;
+    --path-solution-color: #e4e016;
+
+    --closed-color-overlay: var(--path-visited-color);
+    --path-color-overlay: rgba(50, 205, 50, 0.6);
+
 }
 
 body {
@@ -32,8 +41,8 @@ body {
     align-items: center;
     gap: 20px;
     width: 100%;
-    /* --- KEY CHANGE --- */
-    /* Increased max-width to accommodate the side-by-side layout on large monitors. */
+
+
     max-width: 1800px;
 }
 
@@ -44,11 +53,11 @@ body {
     padding: 15px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    /* --- KEY CHANGE --- */
-    /* Made these sections take up the full available width of the new container */
+
+
     width: 100%;
     box-sizing: border-box;
-    /* Ensures padding is included in the width */
+
 }
 
 h1 {
@@ -97,21 +106,15 @@ h1 {
     gap: 10px;
 }
 
-/* --- KEY CHANGE --- */
-/* This is the main change that creates the side-by-side layout. */
+
+
 .main-content {
     display: flex;
-    /* Use Flexbox for layout */
     flex-direction: row;
-    /* Arrange items horizontally */
     flex-wrap: wrap;
-    /* Allow items to stack on small screens */
     gap: 20px;
-    /* Space between grid and log */
     justify-content: center;
-    /* Center the items horizontally */
     align-items: flex-start;
-    /* Align to the top */
     width: 100%;
 }
 
@@ -135,7 +138,8 @@ h1 {
     justify-content: center;
     align-items: center;
     font-size: 8px;
-    color: white;
+    color: #333;
+    background-color: var(--plains-color);
 }
 
 .cell.start,
@@ -151,7 +155,8 @@ h1 {
 
 .cell.wall {
     background-color: var(--wall-color);
-    border-color: #1a1a2e;
+
+    border-color: var(--wall-color);
     animation: wall-pop 0.3s ease-out;
 }
 
@@ -159,29 +164,29 @@ h1 {
     from {
         transform: scale(0.5);
     }
-
     to {
         transform: scale(1.0);
     }
 }
 
 .cell.water {
-    background-color: #3498db;
+    background-color: var(--water-color);
     background-image:
         linear-gradient(45deg, rgba(255, 255, 255, 0.2) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.2) 75%, transparent 75%, transparent);
     background-size: 20px 20px;
 }
 
 .cell.mud {
-    background-color: #795548;
-    background-image: radial-gradient(#8d6e63 20%, transparent 20%),
-        radial-gradient(#6d4c41 20%, transparent 20%);
+    background-color: var(--mud-color);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 20%, transparent 20%),
+        radial-gradient(rgba(0, 0, 0, 0.1) 20%, transparent 20%);
     background-position: 0 0, 10px 10px;
     background-size: 20px 20px;
 }
 
 .cell.forest {
-    background-color: #228B22; /* Forest Green */
+    background-color: var(--forest-color);
+
 }
 
 .cell.closed {
@@ -193,7 +198,7 @@ h1 {
 }
 
 .cell.path.plains {
-    background-color: var(--path-color);
+    background-color: var(--path-solution-color);
 }
 
 .cell.path.water {
@@ -212,16 +217,16 @@ h1 {
 .cell.path.forest {
     background-image:
         linear-gradient(var(--path-color-overlay), var(--path-color-overlay));
-    background-color: #228B22; /* Forest Green, overlay will be on top */
+    background-color: #228B22;
 }
 
 @keyframes path-glow {
     from {
-        box-shadow: inset 0 0 0 2px var(--path-color);
+        box-shadow: inset 0 0 0 2px var(--path-solution-color);
     }
 
     to {
-        box-shadow: inset 0 0 0 3px var(--path-color), 0 0 15px var(--path-color);
+        box-shadow: inset 0 0 0 3px var(--path-solution-color), 0 0 15px var(--path-solution-color);
     }
 }
 
@@ -339,20 +344,20 @@ h1 {
 }
 
 .legend-color.plains {
-    background-color: transparent;
+    background-color: var(--plains-color);
     border: 1px solid var(--grid-bg);
 }
 
 .legend-color.water {
-    background-color: #3498db;
+    background-color: var(--water-color);
 }
 
 .legend-color.mud {
-    background-color: #795548;
+    background-color: var(--mud-color);
 }
 
 .legend-color.forest {
-    background-color: #228B22; /* Forest Green */
+    background-color: var(--forest-color);
 }
 
 .legend-color.closed {
@@ -360,13 +365,13 @@ h1 {
 }
 
 .legend-color.path {
-    background: var(--path-color);
+    background: var(--path-solution-color);
 }
 
 .select-wrapper {
     position: relative;
     display: inline-block;
-    width: 200px; /* Adjust width as needed */
+    width: 200px;
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
     border-radius: 5px;
@@ -378,52 +383,52 @@ h1 {
     box-shadow: 0 0 8px var(--border-color);
 }
 
-/* 2. Our custom arrow, created with CSS */
+
 .select-wrapper::after {
-    content: '▼'; /* You can also use an SVG here */
+    content: '▼';
     font-size: 12px;
     color: var(--text-color);
     position: absolute;
     top: 50%;
     right: 15px;
     transform: translateY(-50%);
-    pointer-events: none; /* Allows clicks to pass through to the select element */
+    pointer-events: none;
     transition: transform 0.3s ease;
 }
 
-/* Optional: Make the arrow point up when the dropdown is open */
-.select-wrapper select:focus + ::after {
+
+.select-wrapper select:focus+ ::after {
     transform: translateY(-50%) rotate(180deg);
 }
 
-/* 3. The actual <select> element, made invisible but functional */
+
 .select-wrapper select {
-    /* Reset default styles */
+
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    
-    /* Make it transparent and cover the wrapper */
+
+
     width: 100%;
     height: 100%;
-    padding: 10px 40px 10px 15px; /* Right padding to not overlap the arrow */
+    padding: 10px 40px 10px 15px;
     background: transparent;
     border: none;
-    
-    /* Style the text */
+
+
     color: var(--light-text);
     font-family: 'Roboto Mono', monospace;
     font-size: 14px;
     cursor: pointer;
 }
 
-/* 4. Style the dropdown options panel */
+
 .select-wrapper select option {
     background-color: var(--primary-color);
     color: var(--light-text);
 }
 
-/* 5. For older browsers like IE */
+
 .select-wrapper select::-ms-expand {
     display: none;
 }
@@ -434,11 +439,9 @@ h1 {
         height: 15px;
         font-size: 6px;
     }
-
     .cell .score {
         font-size: 5px;
     }
-
     .cell .f-score {
         font-size: 6px;
     }
@@ -447,45 +450,54 @@ h1 {
 .comparison-container {
     margin-top: 20px;
     padding: 15px;
-    background-color: #f9f9f9; /* Light background for the container */
+    background-color: #f9f9f9;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    width: 100%; /* Take full width of its parent */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
     box-sizing: border-box;
 }
+
 .comparison-container h2 {
     margin-top: 0;
-    color: #333; /* Darker text color for heading inside this container */
+    color: #333;
     text-align: center;
 }
+
 .table-responsive {
-    overflow-x: auto; /* Allows table to scroll horizontally on small screens */
+    overflow-x: auto;
 }
+
 #comparison-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
 }
-#comparison-table th, #comparison-table td {
-    border: 1px solid #ddd; /* Light grey border for cells */
+
+#comparison-table th,
+#comparison-table td {
+    border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
-    color: #333; /* Darker text for table content */
+    color: #333;
 }
+
 #comparison-table th {
-    background-color: #e9ecef; /* Light grey background for table header */
-    color: #333; /* Darker text for table header */
+    background-color: #e9ecef;
+    color: #333;
     font-weight: bold;
 }
+
 #comparison-table tbody tr:nth-child(even) {
-    background-color: #f2f2f2; /* Zebra striping for table rows */
+    background-color: #f2f2f2;
 }
+
 #comparison-table tbody tr:hover {
-    background-color: #e2e2e2; /* Hover effect for table rows */
+    background-color: #e2e2e2;
 }
+
 #clear-comparison-btn {
     margin-bottom: 10px;
-    display: block; /* Make button take its own line */
-    margin-left: auto; /* Align to right */
-    margin-right: auto; /* Align to center if display:block */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
